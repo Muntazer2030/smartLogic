@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:smartlogic/ui/screens/HomeScreen/home_screen.dart';
+import 'package:smartlogic/ui/screens/Home/home_screen.dart';
+import 'package:smartlogic/ui/screens/exam/exam_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,11 +14,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        
+       
       ),
       home: const HomeScreen(),
     );
   }
 }
-
