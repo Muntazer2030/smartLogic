@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:smartlogic/const/colors.dart';
+import 'package:smartlogic/services/api.dart';
+import 'package:smartlogic/ui/screens/auth/auth_Screen.dart';
 import 'package:smartlogic/ui/widgets/text_widget.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final Api api;
+  const HomeScreen({super.key, required this.api});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -45,6 +48,18 @@ class _HomeScreenState extends State<HomeScreen> {
           textSize: 30,
           isTitle: true,
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout, color: whiteColor, size: screenHeight / screenWidth * 80),
+            onPressed: () {
+              Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AuthScreen(api: widget.api),
+                            ),
+                          );
+            },
+        )],
         backgroundColor: darkColor,
 
         centerTitle: true,
