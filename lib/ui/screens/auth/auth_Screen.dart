@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartlogic/const/colors.dart';
 import 'package:smartlogic/services/api.dart';
+import 'package:smartlogic/services/mqtt_service.dart';
 import 'package:smartlogic/ui/screens/Home/home_screen.dart';
 import 'package:smartlogic/ui/widgets/text_widget.dart';
 
@@ -14,11 +15,21 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool isLogin = true;
+ 
 
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController fullNameController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    // Initialize MQTT Service
+   
+    
+  }
+
+  bool isLoading = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,87 +83,95 @@ class _AuthScreenState extends State<AuthScreen> {
               const SizedBox(height: 26),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (isLogin) {
-                      final response = await widget.api.login(
-                        usernameController.text.trim(),
-                        passwordController.text.trim(),
-                      );
-                      if (response == "Login successful") {
-                        // ignore: use_build_context_synchronously
-                        if (context.mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => HomeScreen(api: widget.api),
-                            ),
-                          );
-                        }
-                      } else {
-                        // ignore: use_build_context_synchronously
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: TextWidget(
-                                text: response,
-                                color: whiteColor,
-                                textSize: 16,
-                              ),
-                              backgroundColor: redColor,
-                            ),
-                          );
-                        }
-                      }
-                    } else {
-                      final response = await widget.api.register(
-                        usernameController.text.trim(),
-                        passwordController.text.trim(),
-                        fullNameController.text.trim(),
-                      );
-                      if (response == "Registration successful") {
-                        // ignore: use_build_context_synchronously
-                        if (context.mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => HomeScreen(api: widget.api),
-                            ),
-                          );
-                        }
-                      } else {
-                        // ignore: use_build_context_synchronously
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: TextWidget(
-                                text: response,
-                                color: whiteColor,
-                                textSize: 16,
-                              ),
-                              backgroundColor: redColor,
-                            ),
-                          );
-                        }
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: backgroundColor,
-                    backgroundColor: primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: TextWidget(
-                    text: isLogin ? "Login" : "Register",
-                    color: backgroundColor,
-                    textSize: 18,
-                    isTitle: true,
-                    isTextCenterd: true,
-                  ),
-                ),
+                child: isLoading
+                    ? Center(child: const CircularProgressIndicator())
+                    : ElevatedButton(
+                        onPressed: () async {
+                          setState(() {
+                            isLoading = true;
+                          });
+                          if (isLogin) {
+                            final response = await widget.api.login(
+                              usernameController.text.trim(),
+                              passwordController.text.trim(),
+                            );
+                            if (response == "Login successful") {
+                              // ignore: use_build_context_synchronously
+                              if (context.mounted) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        HomeScreen(api: widget.api),
+                                  ),
+                                );
+                              }
+                            } else {
+                              // ignore: use_build_context_synchronously
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: TextWidget(
+                                      text: response,
+                                      color: whiteColor,
+                                      textSize: 16,
+                                    ),
+                                    backgroundColor: redColor,
+                                  ),
+                                );
+                              }
+                            }
+                          } else {
+                            final response = await widget.api.register(
+                              usernameController.text.trim(),
+                              passwordController.text.trim(),
+                              fullNameController.text.trim(),
+                            );
+                            if (response == "Registration successful") {
+                              if (context.mounted) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        HomeScreen(api: widget.api),
+                                  ),
+                                );
+                              }
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: TextWidget(
+                                      text: response,
+                                      color: whiteColor,
+                                      textSize: 16,
+                                    ),
+                                    backgroundColor: redColor,
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                          setState(() {
+                            isLoading = false;
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: backgroundColor,
+                          backgroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: TextWidget(
+                          text: isLogin ? "Login" : "Register",
+                          color: backgroundColor,
+                          textSize: 18,
+                          isTitle: true,
+                          isTextCenterd: true,
+                        ),
+                      ),
               ),
               const SizedBox(height: 18),
               TextButton(

@@ -21,14 +21,14 @@ class Api {
       "password": password,
       "name": name,
     });
-    if (response.containsKey("user")) {
+    if (response.containsKey("users")) {
       return "Registration successful";
     }
     return response["msg"];
   }
 
   Future fetchUserData() async {
-    final response = await ApiService.get("user/profile", token: token);
+    final response = await ApiService.get("users/me", token: token);
     if (response.containsKey("profile")) {
       return response["profile"];
     }
@@ -36,7 +36,9 @@ class Api {
   }
 
   Future createUserData(Map<String, dynamic> data) async {
-    final response = await ApiService.post("user/profile", data, token: token);
+    final response = await ApiService.post("users/profile", {
+      "extra": data,
+    }, token: token);
     if (response.containsKey("profile")) {
       return "Profile created successfully";
     }
@@ -44,7 +46,9 @@ class Api {
   }
 
   Future updateUserData(Map<String, dynamic> data) async {
-    final response = await ApiService.put("user/profile", data, token: token);
+    final response = await ApiService.put("users/profile", {
+      "extra": data,
+    }, token: token);
     if (response.containsKey("profile")) {
       return "Profile updated successfully";
     }
