@@ -2,36 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:smartlogic/const/colors.dart';
 import 'package:smartlogic/ui/widgets/timer_widget.dart';
 
-
-
 class QuestionsPage extends StatefulWidget {
   final Map question;
   final int timer;
+  final bool? isVeried;
   //on selected answer
-  final Function(dynamic answer) onAnswerSelected;
+  final Function(dynamic answer) onAnswerSelected, onVerifyCircuit;
 
   const QuestionsPage({
     super.key,
     required this.question,
     required this.onAnswerSelected,
     required this.timer,
-  }) ; // Assign the global key
+    required this.onVerifyCircuit,
+    this.isVeried,
+  }); // Assign the global key
 
   @override
   State<QuestionsPage> createState() => _QuestionsPageState();
 }
 
 class _QuestionsPageState extends State<QuestionsPage> {
-  static const int MAX_ATTEMPTS = 3;
+  static const int maxAttempts = 3;
 
   int? selectedIndex;
   bool isTimeUp = false;
-  
+
   // Circuit Simulation State
   bool _isSimulating = false; // True when waiting for MQTT response
   int _verificationAttempts = 0;
-  bool? _isVerifiedCorrect; // null (unverified), true (correct), false (incorrect)
-
+  bool? _isVerifiedCorrect; // null, true, or false
   // Handles submitting the answer for any question type
   void _submitAnswer() {
     if (isTimeUp) {
@@ -40,56 +40,64 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
 
     if (widget.question['questionType'] == 'MCQ') {
+      var answers = widget.question['answers'];
+      print("DEBUG: Answers Type: ${answers.runtimeType}");
+      print("DEBUG: Value at index: ${answers[selectedIndex!]}");
       // For MCQ, submit the selected index (0, 1, 2, ...)
       if (selectedIndex != null) {
-        widget.onAnswerSelected(widget.question['answers'][selectedIndex!]); // Submit the actual answer text/value
+        widget.onAnswerSelected(
+          widget.question['answers'][selectedIndex!],
+        ); // Submit the actual answer text/value
       } else {
         widget.onAnswerSelected(null); // Unanswered
       }
       // Reset selectedIndex for the next question
       selectedIndex = null;
     } else if (widget.question['questionType'] == 'circuit_simulation') {
-      // For circuit_simulation, the "Next" button handles submission only after verification is attempted.
-      // If correct, the answer was already submitted via updateVerificationStatus.
-      // If max attempts reached, submit null to advance, marking as incorrect.
       widget.onAnswerSelected(null);
     }
   }
 
   // New method to handle the circuit verification trigger
   void _startCircuitVerification() {
-    if (_verificationAttempts >= MAX_ATTEMPTS) return;
+    if (_verificationAttempts >= maxAttempts) return;
 
     setState(() {
       _isSimulating = true;
       _verificationAttempts++;
-      _isVerifiedCorrect = null; // Reset status while verifying
     });
 
     // Signal the parent ExamScreen to execute the MQTT publish action
-   // widget.onAnswerSelected({
-    //  "action": "VERIFY_CIRCUIT",
-   //   "question": widget.question,
-   //   "attempt": _verificationAttempts,
-   //   // You must wire up the parent ExamScreen to listen for the MQTT result
-      // and call the public method updateVerificationStatus below.
-   // });
+    widget.onVerifyCircuit({
+      "truthTable": widget.question['truthTable'],
+      "attempt": _verificationAttempts,
+    });
   }
 
-  // Public method for the parent ExamScreen to call when the MQTT result is received.
-  // The parent should look up this state using the GlobalKey: circuitQuestionKey.currentState?.updateVerificationStatus(...)
-  void updateVerificationStatus(bool isCorrect) {
-    if (!mounted) return;
-    setState(() {
-      _isSimulating = false;
-      _isVerifiedCorrect = isCorrect;
-    });
+  @override
+  void initState() {
+    
+    super.initState();
+    _isVerifiedCorrect = widget.isVeried;
+    _verificationAttempts = 0;
+  }
 
-    // If correct, submit the answer immediately and allow the parent to advance.
-    if (isCorrect) {
-      // Submitting "correct" as a signal, the parent must match this against the expected answer.
-      // Assuming the expected output is part of the question for grading (e.g., "answer": "1").
-      widget.onAnswerSelected("VERIFIED_CORRECTLY"); 
+  @override
+  void didUpdateWidget(covariant QuestionsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isVeried != widget.isVeried &&
+        (widget.isVeried != null || _isSimulating == false)) {
+      setState(() {
+        _isVerifiedCorrect = widget.isVeried;
+        _isSimulating = false; // Add this! Stop the loading spinner
+      });
+    } else if (oldWidget.question['questionNumber'] != widget.question['questionNumber']) {
+      print("New question loaded, resetting simulation state.");
+      // Reset state for new question
+      setState(() {
+        _verificationAttempts = 0;
+        _isVerifiedCorrect = null;
+      });
     }
   }
 
@@ -105,7 +113,8 @@ class _QuestionsPageState extends State<QuestionsPage> {
           // Determine if an answer has been selected/entered for button logic
           bool hasMCQAnswer = selectedIndex != null;
           bool isMCQ = widget.question['questionType'] == 'MCQ';
-          bool isCircuitSimulation = widget.question['questionType'] == 'circuit_simulation';
+          bool isCircuitSimulation =
+              widget.question['questionType'] == 'circuit_simulation';
 
           return Padding(
             padding: EdgeInsets.symmetric(
@@ -149,39 +158,37 @@ class _QuestionsPageState extends State<QuestionsPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
 
                 // Dynamic Content Area (MCQ List or Circuit Simulation Widget)
                 Expanded(
                   child: isMCQ
                       ? _buildMCQOptions(fontSize)
                       : isCircuitSimulation
-                          ? CircuitSimulationView(
-                              onVerifyCircuit: _startCircuitVerification,
-                              isVerifying: _isSimulating,
-                              isTimeUp: isTimeUp,
-                              currentAttempts: _verificationAttempts,
-                              isVerifiedCorrect: _isVerifiedCorrect,
-                              maxAttempts: MAX_ATTEMPTS,
-                              truthTable: widget.question['truthTable'],
-                            )
-                          : Center(
-                              child: Text(
-                                "Unsupported Question Type: ${widget.question['questionType']}",
-                                style: TextStyle(color: redColor),
-                              ),
-                            ),
+                      ? CircuitSimulationView(
+                          onVerifyCircuit: _startCircuitVerification,
+                          isVerifying: _isSimulating,
+                          isTimeUp: isTimeUp,
+                          currentAttempts: _verificationAttempts,
+                          isVerifiedCorrect: _isVerifiedCorrect,
+                          maxAttempts: maxAttempts,
+                          truthTable: widget.question['truthTable'],
+                        )
+                      : Center(
+                          child: Text(
+                            "Unsupported Question Type: ${widget.question['questionType']}",
+                            style: TextStyle(color: redColor),
+                          ),
+                        ),
                 ),
-
-                const SizedBox(height: 20),
-
+                const SizedBox(height: 10),
                 // Next button container
                 Center(
                   child: isMCQ
                       ? _buildMCQNextButton(isTimeUp, hasMCQAnswer)
                       : isCircuitSimulation
-                          ? _buildCircuitNextButton()
-                          : Container(),
+                      ? _buildCircuitNextButton()
+                      : Container(),
                 ),
               ],
             ),
@@ -197,7 +204,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
     // ... (MCQ options list logic remains unchanged)
     return ListView.separated(
       itemCount: widget.question['answers']?.length ?? 0,
-      separatorBuilder: (_, __) => const SizedBox(height: 18),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         bool isSelected = selectedIndex == index;
         return GestureDetector(
@@ -208,28 +215,26 @@ class _QuestionsPageState extends State<QuestionsPage> {
                 },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(
-              vertical: 22,
-              horizontal: 18,
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 18),
             decoration: BoxDecoration(
-              color: isSelected ? primaryColor.withOpacity(0.4) : darkColor,
+              color: isSelected
+                  ? primaryColor.withValues(alpha: 0.4)
+                  : darkColor,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isSelected
                     ? primaryColor
                     : isTimeUp
-                        ? Colors.grey.shade700 // Visually disable answers
-                        : greyColor,
+                    ? Colors
+                          .grey
+                          .shade700 // Visually disable answers
+                    : greyColor,
                 width: isSelected ? 2.5 : 1.3,
               ),
             ),
             child: Text(
               widget.question['answers']![index],
-              style: TextStyle(
-                color: whiteColor,
-                fontSize: fontSize,
-              ),
+              style: TextStyle(color: whiteColor, fontSize: fontSize),
             ),
           ),
         );
@@ -240,14 +245,11 @@ class _QuestionsPageState extends State<QuestionsPage> {
   Widget _buildMCQNextButton(bool isTimeUp, bool hasMCQAnswer) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: (isTimeUp || hasMCQAnswer) ? Colors.teal : Colors.blueGrey,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 40,
-          vertical: 18,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        backgroundColor: (isTimeUp || hasMCQAnswer)
+            ? Colors.teal
+            : Colors.blueGrey,
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         side: isTimeUp
             ? BorderSide(color: redColor, width: 2)
             : BorderSide.none,
@@ -267,8 +269,9 @@ class _QuestionsPageState extends State<QuestionsPage> {
   }
 
   Widget _buildCircuitNextButton() {
-    final bool canProceed = (_isVerifiedCorrect == true) || (_verificationAttempts >= MAX_ATTEMPTS);
-    
+    final bool canProceed =
+        (_isVerifiedCorrect == true) || (_verificationAttempts >= maxAttempts);
+
     // Only show the next button if the conditions are met
     if (!canProceed) {
       return Container();
@@ -277,17 +280,14 @@ class _QuestionsPageState extends State<QuestionsPage> {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.teal,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 40,
-          vertical: 18,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       onPressed: _submitAnswer,
       child: Text(
-        _isVerifiedCorrect == true ? "Next Question" : "Skip (Max Attempts Reached)",
+        _isVerifiedCorrect == true
+            ? "Next Question"
+            : "Skip (Max Attempts Reached)",
         style: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -299,7 +299,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
 }
 
 // =========================================================================
-// CIRCUIT SIMULATION WIDGET 
+// CIRCUIT SIMULATION WIDGET
 // =========================================================================
 
 class CircuitSimulationView extends StatelessWidget {
@@ -326,7 +326,11 @@ class CircuitSimulationView extends StatelessWidget {
   Widget build(BuildContext context) {
     final attemptsLeft = maxAttempts - currentAttempts;
     final maxAttemptsReached = currentAttempts >= maxAttempts;
-    final isVerificationPossible = !isVerifying && !isTimeUp && !maxAttemptsReached && isVerifiedCorrect != true;
+    final isVerificationPossible =
+        !isVerifying &&
+        !isTimeUp &&
+        !maxAttemptsReached &&
+        isVerifiedCorrect != true;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -339,28 +343,29 @@ class CircuitSimulationView extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 5),
         const Text(
           "Ensure your physical circuit is wired correctly on the trainer board and use the same input and output ports before verification.",
           style: TextStyle(color: Colors.white70),
         ),
-        const SizedBox(height: 20),
-        
+        const SizedBox(height: 10),
+
         // Truth Table Display (Inputs visible, Output hidden/revealed)
         Expanded(child: _buildTruthTable()),
-        
-        const SizedBox(height: 20),
-        
+
+        const SizedBox(height: 8),
+
         // Status Message
         _buildStatusMessage(attemptsLeft, maxAttemptsReached),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 5),
 
         // Verify Button
         ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: isTimeUp ? redColor : Colors.lightBlue,
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -390,7 +395,9 @@ class CircuitSimulationView extends StatelessWidget {
                   ],
                 )
               : Text(
-                  isTimeUp ? "Time's Up!" : "Verify Circuit (Attempt ${currentAttempts + 1}/$maxAttempts)",
+                  isTimeUp
+                      ? "Time's Up!"
+                      : "Verify Circuit (Attempt ${currentAttempts + 1}/$maxAttempts)",
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -401,7 +408,7 @@ class CircuitSimulationView extends StatelessWidget {
       ],
     );
   }
-  
+
   // Builds the truth table UI
   Widget _buildTruthTable() {
     final inputs = truthTable['inputs'] as List<dynamic>;
@@ -417,53 +424,64 @@ class CircuitSimulationView extends StatelessWidget {
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         columnWidths: {
           // Dynamic width allocation based on number of headers (3 inputs + 1 output = 4)
-          for (int i = 0; i < headers.length; i++) 
-            i: FlexColumnWidth(i < inputs.length ? 1.0 : 1.5) 
+          for (int i = 0; i < headers.length; i++)
+            i: FlexColumnWidth(i < inputs.length ? 1.0 : 1.5),
         },
         children: [
           // Header Row
           TableRow(
             decoration: BoxDecoration(color: darkColor),
-            children: headers.map((header) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  header,
-                  style: TextStyle(
-                    color: (outputs.contains(header) && !showOutput) 
-                        ? Colors.white54 : Colors.white, // Dim the output header if hidden
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20
-                  ),
-                ),
-              ),
-            )).toList(),
-          ),
-          // Data Rows
-          ...tableData.map((row) => TableRow(
-            children: headers.map((header) {
-              final isOutputColumn = outputs.contains(header);
-              final content = isOutputColumn
-                  ? (showOutput ? row[header].toString() : "?") // Hide or show output
-                  : row[header].toString();
-              
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    content,
-                    style: TextStyle(
-                      color: isOutputColumn 
-                          ? (showOutput ? primaryColor : Colors.white24) 
-                          : Colors.white70,
-                      fontWeight: isOutputColumn && showOutput ? FontWeight.bold : FontWeight.normal,
-                    fontSize: 20
+            children: headers
+                .map(
+                  (header) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        header,
+                        style: TextStyle(
+                          color: (outputs.contains(header) && !showOutput)
+                              ? Colors.white54
+                              : Colors.white, // Dim the output header if hidden
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              );
-            }).toList(),
-          )),
+                )
+                .toList(),
+          ),
+          // Data Rows
+          ...tableData.map(
+            (row) => TableRow(
+              children: headers.map((header) {
+                final isOutputColumn = outputs.contains(header);
+                final content = isOutputColumn
+                    ? (showOutput
+                          ? row[header].toString()
+                          : "?") // Hide or show output
+                    : row[header].toString();
+
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      content,
+                      style: TextStyle(
+                        color: isOutputColumn
+                            ? (showOutput ? primaryColor : Colors.white24)
+                            : Colors.white70,
+                        fontWeight: isOutputColumn && showOutput
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
         ],
       ),
     );
@@ -491,16 +509,24 @@ class CircuitSimulationView extends StatelessWidget {
       return const Text(
         "✅ Verification Successful! Circuit is CORRECT. Press Next.",
         textAlign: TextAlign.center,
-        style: TextStyle(color: Colors.lightGreen, fontSize: 16, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: Colors.lightGreen,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
       );
     }
-    
+
     if (isVerifiedCorrect == false) {
       if (maxAttemptsReached) {
         return const Text(
           "❌ Verification Failed. Maximum attempts reached. Press Next to continue.",
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.redAccent,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         );
       } else {
         return Text(
@@ -510,7 +536,7 @@ class CircuitSimulationView extends StatelessWidget {
         );
       }
     }
-    
+
     return Text(
       "You have $maxAttempts attempts to verify the circuit.",
       textAlign: TextAlign.center,

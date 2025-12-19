@@ -40,6 +40,7 @@ dependencies:
   flutter_pdfview: ^1.4.3
   syncfusion_flutter_pdfviewer: ^31.2.10
   mqtt_client: ^10.11.1
+  pdfrx: ^2.2.18
 
 dev_dependencies:
   flutter_test:

@@ -7,12 +7,14 @@ class ListTileWidget extends StatelessWidget {
   final String subtitle;
   final Widget screen;
   final bool isCompleted;
+  final Function()? onBack;
   const ListTileWidget({
     super.key,
     required this.title,
     required this.subtitle,
     required this.screen,
     required this.isCompleted,
+    this.onBack,
 
   });
 
@@ -32,7 +34,11 @@ class ListTileWidget extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => screen),
-          )
+          ).then((value) {
+            if (onBack != null) {
+              onBack!();
+            }
+          }),
         },
         title: TextWidget(text: title, color: whiteColor, textSize: 26),
         subtitle: TextWidget(text: subtitle, color: whiteColor2, textSize: 18),

@@ -118,12 +118,13 @@ class MqttService {
   // -------------------------------
   // PUBLISH MESSAGE
   // -------------------------------
-  void publish(String topic, String payload) {
+  void publish(String topic, String payload, {bool retain = false}) {
     if (_client.connectionStatus?.state == MqttConnectionState.connected) {
       final builder = MqttClientPayloadBuilder();
       builder.addString(payload);
-
-      _client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
+      
+      _client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!,
+          retain: retain);
     } else {
       print("MQTT: Cannot publish, not connected");
     }

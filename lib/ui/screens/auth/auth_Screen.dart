@@ -49,143 +49,146 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: TextWidget(
-                  key: ValueKey(isLogin),
-                  text: isLogin ? "Welcome Back" : "Create an Account",
-                  color: whiteColor,
-                  textSize: 32,
-                  isTitle: true,
-                  isTextCenterd: true,
+          child:SingleChildScrollView(
+           
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: TextWidget(
+                    key: ValueKey(isLogin),
+                    text: isLogin ? "Welcome Back" : "Create an Account",
+                    color: whiteColor,
+                    textSize: 32,
+                    isTitle: true,
+                    isTextCenterd: true,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              TextWidget(
-                text: isLogin
-                    ? "Enter your credentials to login"
-                    : "Fill the form to register",
-                color: whiteColor2,
-                textSize: 16,
-                isTextCenterd: true,
-              ),
-              const SizedBox(height: 30),
-
-              // Register only full name field
-              if (!isLogin) _inputField("Full Name", fullNameController),
-
-              _inputField("Username", usernameController),
-              _inputField("Password", passwordController, isPassword: true),
-
-              const SizedBox(height: 26),
-              SizedBox(
-                width: double.infinity,
-                child: isLoading
-                    ? Center(child: const CircularProgressIndicator())
-                    : ElevatedButton(
-                        onPressed: () async {
-                          setState(() {
-                            isLoading = true;
-                          });
-                          if (isLogin) {
-                            final response = await widget.api.login(
-                              usernameController.text.trim(),
-                              passwordController.text.trim(),
-                            );
-                            if (response == "Login successful") {
-                              // ignore: use_build_context_synchronously
-                              if (context.mounted) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        HomeScreen(api: widget.api),
-                                  ),
-                                );
-                              }
-                            } else {
-                              // ignore: use_build_context_synchronously
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: TextWidget(
-                                      text: response,
-                                      color: whiteColor,
-                                      textSize: 16,
-                                    ),
-                                    backgroundColor: redColor,
-                                  ),
-                                );
-                              }
-                            }
-                          } else {
-                            final response = await widget.api.register(
-                              usernameController.text.trim(),
-                              passwordController.text.trim(),
-                              fullNameController.text.trim(),
-                            );
-                            if (response == "Registration successful") {
-                              if (context.mounted) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        HomeScreen(api: widget.api),
-                                  ),
-                                );
-                              }
-                            } else {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: TextWidget(
-                                      text: response,
-                                      color: whiteColor,
-                                      textSize: 16,
-                                    ),
-                                    backgroundColor: redColor,
-                                  ),
-                                );
-                              }
-                            }
-                          }
-                          setState(() {
-                            isLoading = false;
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: backgroundColor,
-                          backgroundColor: primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: TextWidget(
-                          text: isLogin ? "Login" : "Register",
-                          color: backgroundColor,
-                          textSize: 18,
-                          isTitle: true,
-                          isTextCenterd: true,
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 18),
-              TextButton(
-                onPressed: () => setState(() => isLogin = !isLogin),
-                child: TextWidget(
+                const SizedBox(height: 6),
+                TextWidget(
                   text: isLogin
-                      ? "Don't have an account? Register"
-                      : "Already have an account? Login",
-                  color: primaryColor,
+                      ? "Enter your credentials to login"
+                      : "Fill the form to register",
+                  color: whiteColor2,
                   textSize: 16,
                   isTextCenterd: true,
                 ),
-              ),
-            ],
+                const SizedBox(height: 30),
+            
+                // Register only full name field
+                if (!isLogin) _inputField("Full Name", fullNameController),
+            
+                _inputField("Username", usernameController),
+                _inputField("Password", passwordController, isPassword: true),
+            
+                const SizedBox(height: 26),
+                SizedBox(
+                  width: double.infinity,
+                  child: isLoading
+                      ? Center(child: const CircularProgressIndicator())
+                      : ElevatedButton(
+                          onPressed: () async {
+                            setState(() {
+                              isLoading = true;
+                            });
+                            if (isLogin) {
+                              final response = await widget.api.login(
+                                usernameController.text.trim(),
+                                passwordController.text.trim(),
+                              );
+                              if (response == "Login successful") {
+                                // ignore: use_build_context_synchronously
+                                if (context.mounted) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          HomeScreen(api: widget.api),
+                                    ),
+                                  );
+                                }
+                              } else {
+                                // ignore: use_build_context_synchronously
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: TextWidget(
+                                        text: response,
+                                        color: whiteColor,
+                                        textSize: 16,
+                                      ),
+                                      backgroundColor: redColor,
+                                    ),
+                                  );
+                                }
+                              }
+                            } else {
+                              final response = await widget.api.register(
+                                usernameController.text.trim(),
+                                passwordController.text.trim(),
+                                fullNameController.text.trim(),
+                              );
+                              if (response == "Registration successful") {
+                                if (context.mounted) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          HomeScreen(api: widget.api),
+                                    ),
+                                  );
+                                }
+                              } else {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: TextWidget(
+                                        text: response,
+                                        color: whiteColor,
+                                        textSize: 16,
+                                      ),
+                                      backgroundColor: redColor,
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                            setState(() {
+                              isLoading = false;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: backgroundColor,
+                            backgroundColor: primaryColor,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: TextWidget(
+                            text: isLogin ? "Login" : "Register",
+                            color: backgroundColor,
+                            textSize: 18,
+                            isTitle: true,
+                            isTextCenterd: true,
+                          ),
+                        ),
+                ),
+                const SizedBox(height: 18),
+                TextButton(
+                  onPressed: () => setState(() => isLogin = !isLogin),
+                  child: TextWidget(
+                    text: isLogin
+                        ? "Don't have an account? Register"
+                        : "Already have an account? Login",
+                    color: primaryColor,
+                    textSize: 16,
+                    isTextCenterd: true,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
