@@ -52,7 +52,6 @@ class _SubjectScreenState extends State<SubjectScreen> {
 
           if (data.containsKey("command") && data['command'] == "test_report") {
             if (data['success'] == true) {
-              
               setState(() {
                 _statusMessage = "✅ Circuit verification PASSED!";
                 _testButtonLoading = false;
@@ -113,7 +112,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
 
   void _publishTruthTableCheck(Map truthTable) async {
     final circuitName = truthTable['content']['circuitName'] ?? "Circuit";
-  
+
     // Convert Map payload to JSON string
     final String payload = jsonEncode(truthTable);
     final String topic =
@@ -194,7 +193,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
                     // Header Row
                     TableRow(
                       decoration: BoxDecoration(
-                        color: darkColor.withValues(alpha:  0.8),
+                        color: darkColor.withValues(alpha: 0.8),
                       ),
                       children: headers
                           .map(
@@ -316,14 +315,22 @@ class _SubjectScreenState extends State<SubjectScreen> {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : localPath != null
-                ? PDFView(
-                    filePath: localPath,
-                    enableSwipe: true,
-                    autoSpacing: true,
-                    pageSnap: true,
-                    pageFling: true,
-                    onError: (error) =>
-                        setState(() => _statusMessage = error.toString()),
+                ? Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: 20,
+                      left: 20,
+                      right: 20,
+                    ),
+                    child: PDFView(
+                      filePath: localPath,
+                      enableSwipe: true,
+                      autoSpacing: true,
+                      pageSnap: true,
+                      pageFling: false,
+                      //fitPolicy: FitPolicy.HEIGHT,
+                      onError: (error) =>
+                          setState(() => _statusMessage = error.toString()),
+                    ),
                   )
                 : Center(
                     child: Text(
@@ -350,8 +357,9 @@ class _SubjectScreenState extends State<SubjectScreen> {
 
           // BUTTON AT BOTTOM (Triggers Verification Flow)
           Container(
-            padding: const EdgeInsets.only(top: 5.0, bottom: 15.0),
-            margin: const EdgeInsets.all(5.0),
+            padding: const EdgeInsets.only(bottom: 15.0),
+
+            alignment: Alignment.center,
             child: _testButtonLoading
                 ? const CircularProgressIndicator()
                 : SizedBox(
