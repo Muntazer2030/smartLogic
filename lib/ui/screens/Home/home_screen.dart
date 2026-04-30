@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:smartlogic/const/colors.dart';
+import 'package:smartlogic/models/chapters.dart';
 import 'package:smartlogic/services/api.dart';
 import 'package:smartlogic/services/mqtt_service.dart';
 import 'package:smartlogic/ui/screens/auth/auth_Screen.dart';
@@ -21,67 +22,34 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  Chapters chapters = Chapters();
   Map<String, dynamic> userData = {};
   final MqttService mqttService = MqttService();
   late StreamSubscription mqttSub;
   late StreamSubscription<bool> connSub;
-  List<String> basicChapters = [
-    'And Gate',
-    'Or Gate',
-    'Not Gate',
-    'NAND Gate',
-    'NOR Gate',
-    'XOR Gate',
-    'XNOR Gate',
-  ];
-  List<String> advancedChapters = [
-    'Half Adder',
-    'Full Adder',
-    'Half Subtractor',
-    'Full Subtractor',
-    'D Flip-Flop',
-    'JK Flip-Flop',
-    'T Flip-Flop',
-    'Decoder',
-    'Encoder',
-    'Multiplexer',
-  ];
-  List<Map> sub = [
-    {'pdf': 'and_gate.pdf', 'name': 'And Gate'},
-    {'pdf': 'or_gate.pdf', 'name': 'Or Gate'},
-    {'pdf': 'not_gate.pdf', 'name': 'Not Gate'},
-    {'pdf': 'nand_gate.pdf', 'name': 'NAND Gate'},
-    {'pdf': 'xor_gate.pdf', 'name': 'XOR Gate'},
-    {'pdf': 'xnor_gate.pdf', 'name': 'XNOR Gate'},
-    {'pdf': 'nor_gate.pdf', 'name': 'NOR Gate'},
-    {'pdf': 'and_gate.pdf', 'name': 'Half Adder'},
-    {'pdf': 'and_gate.pdf', 'name': 'Full Adder'},
-    {'pdf': 'and_gate.pdf', 'name': 'Half Subtractor'},
-    {'pdf': 'and_gate.pdf', 'name': 'Full Subtractor'},
-    {'pdf': 'and_gate.pdf', 'name': 'D Flip-Flop'},
-    {'pdf': 'jk.pdf', 'name': 'JK Flip-Flop'},
-    {'pdf': 'rs.pdf', 'name': 'RS Flip-Flop'},
-    {'pdf': 'and_gate.pdf', 'name': 'Decoder'},
-    {'pdf': 'and_gate.pdf', 'name': 'Encoder'},
-    {'pdf': 'and_gate.pdf', 'name': 'Multiplexer'},
-  ];
-
-  List userBasicChaptersProgress = [0, 0, 0, 0, 0, 0, 0];
-  List userAdvancedChaptersProgress = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
   Future getData() async {
     // Example of using the API service
-    userData = await widget.api.fetchUserData();
-    print(userData);
-    if (userData == {}) {
+    userData = await widget.api.fetchUserData() ?? {};
+    print("userData: $userData");
+    if (userData == {} || userData.isEmpty) {
       print("no user data found");
       await widget.api.createUserData({
         "basicChapters": [0, 0, 0, 0, 0, 0, 0],
         "advancedChapters": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         "grades": [],
       });
-    } else if (userData.containsKey("extra")) {
-      if (userData["extra"] == null) {
+      userData = {
+        ...userData,
+        "extra": {
+          "basicChapters": [0, 0, 0, 0, 0, 0, 0],
+          "advancedChapters": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          "grades": [],
+        },
+
+      };
+    } else if (userData["profile"].containsKey("extra")) {
+      if (userData["profile"]["extra"] == null) {
         print("no extra data found");
         await widget.api.createUserData({
           "basicChapters": [0, 0, 0, 0, 0, 0, 0],
@@ -96,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
             "grades": [],
           },
         };
-      } else if (userData["extra"].isEmpty) {
+      } else if (userData["profile"]["extra"].isEmpty) {
         print("no extra data found");
         await widget.api.updateUserData({
           "basicChapters": [0, 0, 0, 0, 0, 0, 0],
@@ -114,10 +82,12 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         setState(() {
           print("user data found");
-          print(userData["extra"]);
-          print(userData["extra"]["basicChapters"]);
-          userBasicChaptersProgress = userData["extra"]["basicChapters"];
-          userAdvancedChaptersProgress = userData["extra"]["advancedChapters"];
+          print(userData);
+          print(userData["profile"]["extra"]);
+          chapters.userBasicChaptersProgress =
+              userData["profile"]["extra"]["basicChapters"];
+          chapters.userAdvancedChaptersProgress =
+              userData["profile"]["extra"]["advancedChapters"];
         });
       }
     }
@@ -130,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     mqttService.init(
-      server: 'test.mosquitto.org',
+      server: 'broker.emqx.io',
       clientId: 'app_id_${DateTime.now().millisecondsSinceEpoch}',
       port: 1883,
     );
@@ -139,12 +109,13 @@ class _HomeScreenState extends State<HomeScreen> {
     connSub = mqttService.connectionStatus.listen((connected) {
       if (connected) {
         print("MQTT is connected → Subscribing to topic...");
-        mqttService.subscribe("MTU/UUID_NOT_SET/device/status");
-        mqttService.subscribe("MTU/UUID_NOT_SET/status");
-        mqttService.subscribe("MTU/ADMIN");
+        mqttService.subscribe("MTU/BOARD_001/device/status");
+        mqttService.subscribe("MTU/BOARD_001/status");
+        mqttService.subscribe("MTU/BOARD_001/ADMIN");
         if (mounted) {
           setState(() {
             isConnectedToMqtt = true;
+            mqttService.publish( "MTU/BOARD_001/app/status",  userData["name"] ?? "Unknown User", retain: true);
           });
         }
       } else {
@@ -162,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
       print("📨 Topic: ${msg['topic']}");
       print("📨 Payload: ${msg['payload']}");
 
-      if (msg['topic'] == "MTU/ADMIN") {
+      if (msg['topic'] == "MTU/BOARD_001/ADMIN") {
         try {
           final data = json.decode(msg['payload']!);
 
@@ -223,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: TextWidget(
-          text: 'Welcome Muntadher',
+          text: 'Welcome ${userData["name"] ?? "User"}',
           color: whiteColor,
           textSize: 28,
           isTitle: true,
@@ -277,14 +248,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       ListView.builder(
                         physics: BouncingScrollPhysics(),
                         shrinkWrap: true,
-                        itemCount: basicChapters.length,
+                        itemCount: chapters.basicChapters.length,
                         itemBuilder: (context, index) {
                           return ListTileWidget(
-                            title: '${index + 1} : ${basicChapters[index]}',
+                            title:
+                                '${index + 1} : ${chapters.basicChapters[index]}',
                             subtitle:
-                                'Learn about ${basicChapters[index]} and their applications.',
+                                'Learn about ${chapters.basicChapters[index]} and their applications.',
                             screen: SubjectScreen(
-                              data: sub[index],
+                              data: chapters.sub[index],
                               api: widget.api,
                               mqttService: mqttService,
                               userData: userData,
@@ -293,7 +265,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 "index": index,
                               },
                             ),
-                            isCompleted: userBasicChaptersProgress[index] == 1,
+                            isCompleted:
+                                chapters.userBasicChaptersProgress[index] == 1,
                             onBack: () {
                               getData();
                             },
@@ -323,18 +296,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         textSize: 28,
                         isTitle: true,
                       ),
-                      SizedBox(height: 10),
+                      SizedBox(height: 5),
                       ListView.builder(
                         physics: BouncingScrollPhysics(),
                         shrinkWrap: true,
-                        itemCount: advancedChapters.length,
+                        itemCount: chapters.advancedChapters.length,
                         itemBuilder: (context, index) {
                           return ListTileWidget(
-                            title: '${index + 1} : ${advancedChapters[index]}',
+                            title:
+                                '${index + 1} : ${chapters.advancedChapters[index]}',
                             subtitle:
-                                'Explore the workings of ${advancedChapters[index]}.',
+                                'Explore the workings of ${chapters.advancedChapters[index]}.',
                             screen: SubjectScreen(
-                              data: sub[index],
+                              data: chapters.sub[index],
                               api: widget.api,
                               mqttService: mqttService,
                               userData: userData,
@@ -344,7 +318,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               },
                             ),
                             isCompleted:
-                                userAdvancedChaptersProgress[index] == 1,
+                                chapters.userAdvancedChaptersProgress[index] ==
+                                1,
                             onBack: () {
                               getData();
                             },

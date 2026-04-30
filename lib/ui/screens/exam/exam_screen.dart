@@ -7,7 +7,6 @@ import 'package:smartlogic/services/api.dart';
 import 'package:smartlogic/services/mqtt_service.dart';
 import 'package:smartlogic/ui/screens/auth/auth_Screen.dart';
 import 'package:smartlogic/ui/screens/exam/pages/questions_page.dart';
-// Import the new results screen (you will create this)
 import 'package:smartlogic/ui/screens/exam/pages/exam_results_page.dart';
 
 class ExamScreen extends StatefulWidget {
@@ -46,7 +45,7 @@ class _ExamScreenState extends State<ExamScreen> {
       print("📨 Topic: ${msg['topic']}");
       print("📨 Payload: ${msg['payload']}");
 
-      if (msg['topic'] == "MTU/UUID_NOT_SET/status") {
+      if (msg['topic'] == "MTU/BOARD_001/status") {
         try {
           final data = json.decode(msg['payload']!);
 
@@ -88,7 +87,7 @@ class _ExamScreenState extends State<ExamScreen> {
     // Convert Map payload to JSON string
     final String payload = jsonEncode(cmd);
     final String topic =
-        "MTU/UUID_NOT_SET/command"; // Assuming a common command topic
+        "MTU/BOARD_001/command"; // Assuming a common command topic
     try {
       // Use the injected MqttService to publish
       widget.mqttService.publish(topic, payload);
@@ -98,18 +97,13 @@ class _ExamScreenState extends State<ExamScreen> {
   }
 
   // New method to process answers and calculate the final score
+  // Update _calculateResults to call the API function at the end
   void _calculateResults() {
     print("Calculating final results...");
     double calculatedScore = 0.0;
-
-    // Check if the number of recorded answers matches the number of questions
     final int numQuestions = widget.examData['questions'].length;
 
-    // The length of _isCorrectList should match the number of questions
-    // If not, it means the time ran out before all questions were processed in the loop
-    // This padding ensures we don't crash when iterating through results
     if (_isCorrectList.length < numQuestions) {
-      // Pad with 'false' for any remaining unanswered questions
       for (int i = _isCorrectList.length; i < numQuestions; i++) {
         _isCorrectList.add(false);
       }
@@ -119,20 +113,51 @@ class _ExamScreenState extends State<ExamScreen> {
       final question = widget.examData['questions'][i];
       final double grade = (question['grade'] as num).toDouble();
 
-      // If the answer for this question was correct, add its grade to the score
       if (_isCorrectList[i] == true) {
         calculatedScore += grade;
       }
-      print(
-        "Question ${i + 1}: "
-        "Answered ${_isCorrectList[i] ? 'Correctly' : 'Incorrectly/Unanswered'}, "
-        "Grade: $grade",
-      );
     }
 
     setState(() {
       _finalScore = calculatedScore;
     });
+
+    // NEW: Trigger API call once score is calculated
+    _sendExamReportToApi();
+  }
+
+  // NEW: Constructs the detailed JSON and sends it via API
+  void _sendExamReportToApi() async {
+    List<Map<String, dynamic>> detailedResults = [];
+    
+    // Build a detailed report for every question
+    for (int i = 0; i < widget.examData['questions'].length; i++) {
+      detailedResults.add({
+        "questionNumber": i + 1,
+        "questionType": widget.examData['questions'][i]['questionType'],
+        "questionText": widget.examData['questions'][i]['questionText'],
+        "gradeWeight": widget.examData['questions'][i]['grade'],
+        "isCorrect": _isCorrectList[i],
+      });
+    }
+
+    // Assemble the final JSON payload
+    Map<String, dynamic> reportPayload = {
+      "subject": widget.examData['examName'] ?? "Circuit Simulation Exam",
+      "score": _finalScore,
+      "totalPossibleScore": _totalPossibleScore,
+      "date": DateTime.now().toIso8601String(), // Current date & time
+      "details": detailedResults, 
+    };
+
+    try {
+      print("Sending exam report...");
+      // Using the injected API service to send the report
+      final response = await widget.api.sendExamReport(reportPayload);
+      print("API Response: $response");
+    } catch (e) {
+      print("Failed to send exam report to server: $e");
+    }
   }
 
   @override
@@ -220,11 +245,12 @@ class _ExamScreenState extends State<ExamScreen> {
                   // --- CASE 2: NORMAL ANSWER ---
                   if (answer == null) {
                     print("No answer selected");
-                    isCorrect =
-                        false; // Treat null as wrong? Or handle differently?
-                  } else if (answer ==
-                      widget
-                          .examData['questions'][_currentQuestionIndex]['answer']) {
+                    isCorrect = false; 
+                  } else if (answer is bool) {
+                    
+                    print("Circuit verification result: $answer");
+                    isCorrect = answer;
+                  } else if (answer == widget.examData['questions'][_currentQuestionIndex]['answer']) {
                     print("Correct answer selected");
                     isCorrect = true;
                   } else {

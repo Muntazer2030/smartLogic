@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = "http://10.104.50.132:5000/";
+  static const String baseUrl = "http://10.89.205.132:5000/";
   static Map<String, String> _headers({String? token}) {
     return {
       "Content-Type": "application/json",

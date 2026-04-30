@@ -30,25 +30,28 @@ class MqttService {
     String? username,
     String? password,
   }) async {
+    print("Initializing MQTT Service...");
+    print("Server: $server, Client ID: $clientId, Port: $port");
     _client = MqttServerClient(server, clientId);
     _client.port = port;
+    _client.secure = false;
     _client.keepAlivePeriod = 30;
-
+    _client.connectTimeoutPeriod =10000;
     _client.logging(on: false);
     _client.onDisconnected = _onDisconnected;
 
     // Set connection message
     _client.connectionMessage = MqttConnectMessage()
         .withClientIdentifier(clientId)
-        .startClean()
-        .withWillQos(MqttQos.atLeastOnce);
+        .startClean();
+        
 
     if (username != null && password != null) {
       _client.connectionMessage = MqttConnectMessage()
           .withClientIdentifier(clientId)
           .authenticateAs(username, password)
-          .startClean()
-          .withWillQos(MqttQos.atLeastOnce);
+          .startClean();
+         
     }
 
     await connect();

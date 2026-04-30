@@ -40,21 +40,21 @@ class ListTileWidget extends StatelessWidget {
             }
           }),
         },
-        title: TextWidget(text: title, color: whiteColor, textSize: 26),
-        subtitle: TextWidget(text: subtitle, color: whiteColor2, textSize: 18),
+        title: TextWidget(text: title, color: whiteColor, textSize: 22),
+        subtitle: TextWidget(text: subtitle, color: whiteColor2, textSize: 16),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
            isCompleted ?  Icon(
               Icons.check,
               color: greenColor,
-              size: screenHeight / screenWidth * 100,
+              size: screenHeight / screenWidth * 70,
             ): const SizedBox.shrink(),
             SizedBox(width: screenWidth * 0.02),
             Icon(
               Icons.arrow_forward,
               color: whiteColor,
-              size: screenHeight / screenWidth * 100,
+              size: screenHeight / screenWidth * 70,
             ),
           ],
         ),

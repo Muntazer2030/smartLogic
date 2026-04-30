@@ -46,7 +46,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
       print("📨 Topic: ${msg['topic']}");
       print("📨 Payload: ${msg['payload']}");
 
-      if (msg['topic'] == "MTU/UUID_NOT_SET/status") {
+      if (msg['topic'] == "MTU/BOARD_001/status") {
         try {
           final data = json.decode(msg['payload']!);
 
@@ -56,12 +56,12 @@ class _SubjectScreenState extends State<SubjectScreen> {
                 _statusMessage = "✅ Circuit verification PASSED!";
                 _testButtonLoading = false;
                 Map<String, dynamic> uData = widget.userData;
-
-                uData["extra"][widget.supjectIndo["chapters"]][widget
+                print("Current user data extra: ${uData["profile"]["extra"]}");
+                uData["profile"]["extra"][widget.supjectIndo["chapters"]][widget
                         .supjectIndo["index"]] =
                     1;
-
-                widget.api.updateUserData(uData["extra"]);
+        
+                widget.api.updateUserData(uData["profile"]["extra"]);
               });
             } else {
               setState(() {
@@ -116,7 +116,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
     // Convert Map payload to JSON string
     final String payload = jsonEncode(truthTable);
     final String topic =
-        "MTU/UUID_NOT_SET/command"; // Assuming a common command topic
+        "MTU/BOARD_001/command"; // Assuming a common command topic
 
     setState(() {
       _statusMessage = "Sending '$circuitName' verification command to ESP...";

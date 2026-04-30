@@ -54,7 +54,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
       // Reset selectedIndex for the next question
       selectedIndex = null;
     } else if (widget.question['questionType'] == 'circuit_simulation') {
-      widget.onAnswerSelected(null);
+      widget.onAnswerSelected(_isVerifiedCorrect ?? false);
     }
   }
 

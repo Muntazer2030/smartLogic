@@ -30,7 +30,7 @@ class Api {
   Future fetchUserData() async {
     final response = await ApiService.get("users/me", token: token);
     if (response.containsKey("profile")) {
-      return response["profile"];
+      return response;
     }
     return response["msg"];
   }
@@ -39,6 +39,7 @@ class Api {
     final response = await ApiService.post("users/profile", {
       "extra": data,
     }, token: token);
+    print("createUserData response: $response");
     if (response.containsKey("profile")) {
       return "Profile created successfully";
     }
@@ -53,5 +54,13 @@ class Api {
       return "Profile updated successfully";
     }
     return response["msg"];
+  }
+
+  Future sendExamReport(Map<String, dynamic> report) async {
+    final response = await ApiService.post("users/exams", report, token: token);
+    if (response.containsKey("success") && response["success"] == true) {
+      return "Report sent successfully";
+    }
+    return response["msg"] ?? "Failed to send report";
   }
 }
