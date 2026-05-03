@@ -57,7 +57,8 @@ class Api {
   }
 
   Future sendExamReport(Map<String, dynamic> report) async {
-    final response = await ApiService.post("users/exams", report, token: token);
+    print("sendExamReport payload: $report");
+    final response = await ApiService.post("users/exams", report, token: token); 
     if (response.containsKey("success") && response["success"] == true) {
       return "Report sent successfully";
     }

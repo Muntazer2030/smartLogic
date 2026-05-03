@@ -207,17 +207,21 @@ Map jkFlipFlopTruthTable = {
   },
 };
 
-Map tFlipFlopTruthTable = {
+Map rsFlipFlopTruthTable = {
   "command": "check_truth_table",
   "content": {
-    "circuitName": "T Flip-Flop",
-    "inputs": ["A", "CLK"],
+    "circuitName": "RS Flip-Flop",
+    "inputs": ["A", "B", "CLK"],
     "outputs": ["Y1", "Y2"],
     "table": [
-      {"A": 0, "CLK": 0, "Y1": "No Change", "Y2": "No Change"},
-      {"A": 0, "CLK": 1, "Y1": "No Change", "Y2": "No Change"},
-      {"A": 1, "CLK": 0, "Y1": "No Change", "Y2": "No Change"},
-      {"A": 1, "CLK": 1, "Y1": "Toggle", "Y2": "Toggle"},
+      {"A": 0, "B": 0, "CLK": 0, "Y1": "No Change", "Y2": "No Change"},
+      {"A": 0, "B": 0, "CLK": 1, "Y1": "No Change", "Y2": "No Change"},
+      {"A": 0, "B": 1, "CLK": 0, "Y1": "No Change", "Y2": "No Change"},
+      {"A": 0, "B": 1, "CLK": 1, "Y1": 0, "Y2": 1},
+      {"A": 1, "B": 0, "CLK": 0, "Y1": "No Change", "Y2": "No Change"},
+      {"A": 1,("B"): 0,("CLK"): 1,("Y1"): 1,("Y2"): 0},
+      {"A": 1,("B"): 1,("CLK"): 0,("Y1"): "No Change",("Y2"): "No Change"},
+      {"A": 1,("B"): 1,("CLK"): 1,("Y1"): "Toggle",("Y2"): "Toggle"},
     ],
   },
 };
@@ -484,10 +488,10 @@ final Map<String, Map> availableCircuits = {
   "Full Subtractor": fullSubtractorTruthTable,
   "D Flip-Flop": dFlipFlopTruthTable,
   "JK Flip-Flop": jkFlipFlopTruthTable,
-  "T Flip-Flop": tFlipFlopTruthTable,
-  "3-to-8 Decoder": decoder3To8TruthTable,
-  "8-to-3 Encoder": encoder8To3TruthTable,
-  "4-to-1 Multiplexer": multiplexer4To1TruthTable,
+  "RS Flip-Flop": rsFlipFlopTruthTable,
+  "Decoder": decoder3To8TruthTable,
+  "Encoder": encoder8To3TruthTable,
+  "Multiplexer": multiplexer4To1TruthTable,
 };
 
 

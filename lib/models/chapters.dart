@@ -15,7 +15,7 @@ class Chapters {
     'Full Subtractor',
     'D Flip-Flop',
     'JK Flip-Flop',
-    'T Flip-Flop',
+    'RS Flip-Flop',
     'Decoder',
     'Encoder',
     'Multiplexer',
@@ -29,16 +29,16 @@ class Chapters {
     {'pdf': 'xor_gate.pdf', 'name': 'XOR Gate'},
     {'pdf': 'xnor_gate.pdf', 'name': 'XNOR Gate'},
     
-    {'pdf': 'and_gate.pdf', 'name': 'Half Adder'},
-    {'pdf': 'and_gate.pdf', 'name': 'Full Adder'},
-    {'pdf': 'and_gate.pdf', 'name': 'Half Subtractor'},
-    {'pdf': 'and_gate.pdf', 'name': 'Full Subtractor'},
+    {'pdf': 'half_a.pdf', 'name': 'Half Adder'},
+    {'pdf': 'full_a.pdf', 'name': 'Full Adder'},
+    {'pdf': 'half_s.pdf', 'name': 'Half Subtractor'},
+    {'pdf': 'full_s.pdf', 'name': 'Full Subtractor'},
     {'pdf': 'd.pdf', 'name': 'D Flip-Flop'},
     {'pdf': 'jk.pdf', 'name': 'JK Flip-Flop'},
     {'pdf': 'rs.pdf', 'name': 'RS Flip-Flop'},
-    {'pdf': 'and_gate.pdf', 'name': 'Decoder'},
-    {'pdf': 'and_gate.pdf', 'name': 'Encoder'},
-    {'pdf': 'and_gate.pdf', 'name': 'Multiplexer'},
+    {'pdf': 'decoder.pdf', 'name': 'Decoder'},
+    {'pdf': 'encoder.pdf', 'name': 'Encoder'},
+    {'pdf': 'mu.pdf', 'name': 'Multiplexer'},
   ];
 
   List userBasicChaptersProgress = [0, 0, 0, 0, 0, 0, 0];

@@ -308,13 +308,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             subtitle:
                                 'Explore the workings of ${chapters.advancedChapters[index]}.',
                             screen: SubjectScreen(
-                              data: chapters.sub[index],
+                              data: chapters.sub[index + chapters.basicChapters.length],
                               api: widget.api,
                               mqttService: mqttService,
                               userData: userData,
                               supjectIndo: {
                                 "chapters": "advancedChapters",
-                                "index": index,
+                                "index": index ,
                               },
                             ),
                             isCompleted:

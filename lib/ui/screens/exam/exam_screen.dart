@@ -28,10 +28,15 @@ class _ExamScreenState extends State<ExamScreen> {
   int _currentQuestionIndex = 0;
   // Stores true for correct, false for incorrect/unanswered
   List<bool> _isCorrectList = [];
+  
+  // NEW: Stores the actual answers the user provided
+  List<dynamic> _userAnswers = []; 
+  
   double _finalScore = 0.0;
   double _totalPossibleScore = 0.0;
   bool? verfiyState;
   late StreamSubscription mqttSub;
+  
   @override
   void initState() {
     super.initState();
@@ -86,8 +91,7 @@ class _ExamScreenState extends State<ExamScreen> {
 
     // Convert Map payload to JSON string
     final String payload = jsonEncode(cmd);
-    final String topic =
-        "MTU/BOARD_001/command"; // Assuming a common command topic
+    final String topic = "MTU/BOARD_001/command";
     try {
       // Use the injected MqttService to publish
       widget.mqttService.publish(topic, payload);
@@ -96,16 +100,16 @@ class _ExamScreenState extends State<ExamScreen> {
     }
   }
 
-  // New method to process answers and calculate the final score
-  // Update _calculateResults to call the API function at the end
   void _calculateResults() {
     print("Calculating final results...");
     double calculatedScore = 0.0;
     final int numQuestions = widget.examData['questions'].length;
 
+    // Pad the lists if the exam ended early
     if (_isCorrectList.length < numQuestions) {
       for (int i = _isCorrectList.length; i < numQuestions; i++) {
         _isCorrectList.add(false);
+        _userAnswers.add("Unanswered"); // NEW: Pad the answers list too
       }
     }
 
@@ -122,22 +126,35 @@ class _ExamScreenState extends State<ExamScreen> {
       _finalScore = calculatedScore;
     });
 
-    // NEW: Trigger API call once score is calculated
+    // Trigger API call once score is calculated
     _sendExamReportToApi();
   }
 
-  // NEW: Constructs the detailed JSON and sends it via API
   void _sendExamReportToApi() async {
     List<Map<String, dynamic>> detailedResults = [];
     
     // Build a detailed report for every question
     for (int i = 0; i < widget.examData['questions'].length; i++) {
+      
+      // NEW: Format the student's answer for better readability in the Master App
+      dynamic rawAnswer = _userAnswers[i];
+      String formattedAnswer;
+      if (rawAnswer == null) {
+        formattedAnswer = "Skipped";
+      } else if (rawAnswer is bool) {
+        formattedAnswer = rawAnswer ? "Verified Correctly" : "Failed Verification";
+      } else {
+        formattedAnswer = rawAnswer.toString();
+      }
+
       detailedResults.add({
         "questionNumber": i + 1,
         "questionType": widget.examData['questions'][i]['questionType'],
         "questionText": widget.examData['questions'][i]['questionText'],
         "gradeWeight": widget.examData['questions'][i]['grade'],
         "isCorrect": _isCorrectList[i],
+        "studentAnswer": formattedAnswer, // NEW: Include the actual answer
+        "expectedAnswer": widget.examData['questions'][i]['answer'] ?? "Circuit Verification", // NEW: Send what the correct answer was
       });
     }
 
@@ -146,13 +163,12 @@ class _ExamScreenState extends State<ExamScreen> {
       "subject": widget.examData['examName'] ?? "Circuit Simulation Exam",
       "score": _finalScore,
       "totalPossibleScore": _totalPossibleScore,
-      "date": DateTime.now().toIso8601String(), // Current date & time
+      "date": DateTime.now().toIso8601String(),
       "details": detailedResults, 
     };
 
     try {
       print("Sending exam report...");
-      // Using the injected API service to send the report
       final response = await widget.api.sendExamReport(reportPayload);
       print("API Response: $response");
     } catch (e) {
@@ -195,21 +211,13 @@ class _ExamScreenState extends State<ExamScreen> {
       body: _currentQuestionIndex < widget.examData['questions'].length
           ? QuestionsPage(
               question: {
-                "truthTable":
-                    widget
-                        .examData['questions'][_currentQuestionIndex]['truthTable'] ??
-                    "",
-
+                "truthTable": widget.examData['questions'][_currentQuestionIndex]['truthTable'] ?? "",
                 'questionNumber': _currentQuestionIndex + 1,
                 'questionTotal': widget.examData['questions'].length,
-                'questionType': widget
-                    .examData['questions'][_currentQuestionIndex]['questionType'],
-                'questionText': widget
-                    .examData['questions'][_currentQuestionIndex]['questionText'],
-                'answers': widget
-                    .examData['questions'][_currentQuestionIndex]['answers'],
+                'questionType': widget.examData['questions'][_currentQuestionIndex]['questionType'],
+                'questionText': widget.examData['questions'][_currentQuestionIndex]['questionText'],
+                'answers': widget.examData['questions'][_currentQuestionIndex]['answers'],
               },
-
               onVerifyCircuit: (answer) {
                 print("Verifying circuit via MQTT...");
                 _publishTruthTableCheck(answer['truthTable']);
@@ -219,35 +227,35 @@ class _ExamScreenState extends State<ExamScreen> {
                 setState(() {
                   bool isCorrect = false;
                   verfiyState = null;
+                  
                   // --- CASE 1: TIME IS UP ---
                   if (answer == "time_up") {
                     print("Time is up");
 
                     // 1. Mark current question as false
                     _isCorrectList.add(false);
+                    _userAnswers.add("Time's Up"); // NEW: Record that time ran out
                     _currentQuestionIndex++;
 
                     // 2. Mark remaining questions as false
-                    final remainingQuestions =
-                        widget.examData['questions'].length -
-                        _currentQuestionIndex;
+                    final remainingQuestions = widget.examData['questions'].length - _currentQuestionIndex;
                     for (int i = 0; i < remainingQuestions; i++) {
                       _isCorrectList.add(false);
+                      _userAnswers.add("Time's Up"); // NEW: Record that time ran out for remaining
                       _currentQuestionIndex++;
                     }
 
-                    // 3. CRITICAL FIX: Calculate results BEFORE returning
                     _calculateResults();
-
-                    return; // Now it's safe to return, finalScore is updated
+                    return; 
                   }
 
                   // --- CASE 2: NORMAL ANSWER ---
+                  _userAnswers.add(answer); // NEW: Record the answer the user selected
+
                   if (answer == null) {
                     print("No answer selected");
                     isCorrect = false; 
                   } else if (answer is bool) {
-                    
                     print("Circuit verification result: $answer");
                     isCorrect = answer;
                   } else if (answer == widget.examData['questions'][_currentQuestionIndex]['answer']) {
@@ -263,8 +271,7 @@ class _ExamScreenState extends State<ExamScreen> {
                   _currentQuestionIndex++;
 
                   // --- CHECK END OF EXAM ---
-                  if (_currentQuestionIndex >=
-                      widget.examData['questions'].length) {
+                  if (_currentQuestionIndex >= widget.examData['questions'].length) {
                     _calculateResults();
                   }
                 });
@@ -274,7 +281,6 @@ class _ExamScreenState extends State<ExamScreen> {
           : ExamResultsPage(
               finalScore: _finalScore,
               totalPossibleScore: _totalPossibleScore,
-              // You can pass the detailed results list if needed for review
               isCorrectList: _isCorrectList,
             ),
     );
